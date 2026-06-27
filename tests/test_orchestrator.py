@@ -38,6 +38,7 @@ def _action(payload="print('ok')", rules=None):
 @pytest.fixture(autouse=True)
 def tmp_db(tmp_path, monkeypatch):
     monkeypatch.setenv("VERITY_DB_PATH", str(tmp_path / "orch_test.db"))
+    monkeypatch.setenv("VERITY_ALLOW_SUBPROCESS_FALLBACK", "true")
     from pathlib import Path
 
     import app.ledger as ledger_mod
@@ -158,3 +159,12 @@ def test_proof_action_id_matches_request():
     resp = orch.run("my-unique-id", _action())
     assert resp.proof.action_id == "my-unique-id"
     assert resp.action_id == "my-unique-id"
+
+
+def test_proof_contains_key_id_and_algorithm():
+    orch = _make_orchestrator()
+    resp = orch.run("action-key-id", _action())
+
+    assert resp.proof is not None
+    assert len(resp.proof.key_id) == 16  # 16-char hex fingerprint
+    assert resp.proof.algorithm == "Ed25519"

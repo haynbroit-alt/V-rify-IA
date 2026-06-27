@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture(autouse=True)
 def tmp_db(tmp_path, monkeypatch):
     monkeypatch.setenv("VERITY_DB_PATH", str(tmp_path / "test_gateway.db"))
+    monkeypatch.setenv("VERITY_ALLOW_SUBPROCESS_FALLBACK", "true")
     from pathlib import Path
 
     import app.ledger as ledger_mod
@@ -52,7 +53,7 @@ def test_verify_valid_code(client):
     assert data["action_id"] != ""
     assert data["proof"]["signature"] != ""
     assert data["verification"]["rules_evaluated"] == 2
-    # v0.3: orchestrator fields
+    # v0.3+: orchestrator fields
     assert data["state"] in ("COMPLETED", "FAILED_EXECUTION", "FAILED_PERSISTENCE")
     assert len(data["transitions"]) >= 3
 

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from app.kernel import ExecutionKernel
@@ -5,7 +7,8 @@ from app.models import ExecutionConstraints, ExecutionStatus, Language
 
 
 @pytest.fixture
-def kernel():
+def kernel(monkeypatch):
+    monkeypatch.setenv("VERITY_ALLOW_SUBPROCESS_FALLBACK", "true")
     return ExecutionKernel()
 
 
@@ -43,3 +46,12 @@ def test_syntax_error(kernel, default_constraints):
     result = kernel.execute("def foo(: pass", default_constraints)
     assert result.exit_code != 0
     assert result.status == ExecutionStatus.failure
+
+
+def test_docker_unavailable_without_fallback_raises(monkeypatch):
+    """When Docker is unreachable and fallback is disabled, execute() must raise."""
+    monkeypatch.setenv("VERITY_ALLOW_SUBPROCESS_FALLBACK", "false")
+    with patch("docker.from_env", side_effect=Exception("Docker not found")):
+        kernel = ExecutionKernel()
+    with pytest.raises(RuntimeError, match="Secure execution backend unavailable"):
+        kernel.execute("print('hi')", ExecutionConstraints())

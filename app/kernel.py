@@ -4,6 +4,7 @@ import time
 import docker
 from docker.errors import APIError, ImageNotFound
 
+from app.config import get_settings
 from app.models import ExecutionConstraints, ExecutionResult, ExecutionStatus, Language
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,12 @@ LANGUAGE_COMMANDS = {
     Language.bash: lambda code: ["bash", "-c", code],
 }
 
+# Docker sandbox hardening constants
+_CPU_QUOTA = 50_000  # 50 % of one CPU per period
+_CPU_PERIOD = 100_000  # 100 ms scheduling window
+_PIDS_LIMIT = 64
+_TMPFS = {"/tmp": "rw,noexec,nosuid,size=64m"}
+
 
 class ExecutionKernel:
     """
@@ -32,11 +39,25 @@ class ExecutionKernel:
             self.client = docker.from_env()
             self.client.ping()
         except Exception as e:
-            logger.warning(f"Docker unavailable: {e}. Kernel will use fallback mode.")
             self.client = None
+            if get_settings().allow_subprocess_fallback:
+                logger.warning(
+                    "Docker unavailable — subprocess fallback active (development only)",
+                    extra={"error": str(e)},
+                )
+            else:
+                logger.error(
+                    "Docker unavailable; subprocess fallback is disabled",
+                    extra={"error": str(e)},
+                )
 
     def execute(self, code: str, constraints: ExecutionConstraints) -> ExecutionResult:
         if self.client is None:
+            if not get_settings().allow_subprocess_fallback:
+                raise RuntimeError(
+                    "Secure execution backend unavailable: Docker is not reachable. "
+                    "Set VERITY_ALLOW_SUBPROCESS_FALLBACK=true for development use only."
+                )
             return self._fallback_execute(code, constraints)
         return self._docker_execute(code, constraints)
 
@@ -58,6 +79,14 @@ class ExecutionKernel:
                 remove=False,
                 stdout=True,
                 stderr=True,
+                # Hardened sandbox profile
+                cpu_quota=_CPU_QUOTA,
+                cpu_period=_CPU_PERIOD,
+                pids_limit=_PIDS_LIMIT,
+                cap_drop=["ALL"],
+                security_opt=["no-new-privileges:true"],
+                tmpfs=_TMPFS,
+                user="1000:1000",
             )
 
             try:
@@ -105,7 +134,7 @@ class ExecutionKernel:
                     pass
 
     def _fallback_execute(self, code: str, constraints: ExecutionConstraints) -> ExecutionResult:
-        """Subprocess fallback when Docker is unavailable (dev/test only)."""
+        """Subprocess fallback — development only; never enable in production."""
         import subprocess
 
         start_time = time.time()

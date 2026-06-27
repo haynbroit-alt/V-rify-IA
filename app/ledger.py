@@ -32,6 +32,18 @@ else:
 _public_key = _private_key.public_key()
 
 
+def _derive_key_id() -> str:
+    """16-char hex fingerprint of the public key — changes on key rotation."""
+    pub_raw = _public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    return hashlib.sha256(pub_raw).hexdigest()[:16]
+
+
+_KEY_ID = _derive_key_id()
+
+
 def get_public_key_pem() -> str:
     """Return the Ed25519 public key in PEM format for independent signature verification."""
     return _public_key.public_bytes(
@@ -49,10 +61,21 @@ def _init_db(conn: sqlite3.Connection) -> None:
             payload_hash  TEXT NOT NULL,
             result_hash   TEXT NOT NULL,
             signature     TEXT NOT NULL,
-            timestamp     REAL NOT NULL
+            timestamp     REAL NOT NULL,
+            key_id        TEXT NOT NULL DEFAULT '',
+            algorithm     TEXT NOT NULL DEFAULT 'Ed25519'
         )
         """
     )
+    # Forward-compatible migration: add columns missing from older schemas.
+    for col, defn in [
+        ("key_id", "TEXT NOT NULL DEFAULT ''"),
+        ("algorithm", "TEXT NOT NULL DEFAULT 'Ed25519'"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE proof_ledger ADD COLUMN {col} {defn}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
     conn.commit()
 
 
@@ -102,6 +125,8 @@ class ProofLedger:
             signature=signature,
             timestamp=ts,
             agent_id=agent_id,
+            key_id=_KEY_ID,
+            algorithm="Ed25519",
         )
         self._persist(record)
         return record
@@ -110,8 +135,8 @@ class ProofLedger:
         conn = _get_conn()
         try:
             row = conn.execute(
-                "SELECT action_id, agent_id, payload_hash, result_hash, signature, timestamp "
-                "FROM proof_ledger WHERE action_id = ?",
+                "SELECT action_id, agent_id, payload_hash, result_hash, signature, timestamp, "
+                "key_id, algorithm FROM proof_ledger WHERE action_id = ?",
                 (action_id,),
             ).fetchone()
         finally:
@@ -126,6 +151,8 @@ class ProofLedger:
             result_hash=row[3],
             signature=row[4],
             timestamp=row[5],
+            key_id=row[6],
+            algorithm=row[7],
         )
 
     def verify_signature(self, record: ProofRecord) -> bool:
@@ -147,7 +174,9 @@ class ProofLedger:
         conn = _get_conn()
         try:
             conn.execute(
-                "INSERT OR REPLACE INTO proof_ledger VALUES (?,?,?,?,?,?)",
+                "INSERT OR REPLACE INTO proof_ledger "
+                "(action_id, agent_id, payload_hash, result_hash, signature, timestamp, "
+                "key_id, algorithm) VALUES (?,?,?,?,?,?,?,?)",
                 (
                     record.action_id,
                     record.agent_id,
@@ -155,6 +184,8 @@ class ProofLedger:
                     record.result_hash,
                     record.signature,
                     record.timestamp,
+                    record.key_id,
+                    record.algorithm,
                 ),
             )
             conn.commit()
