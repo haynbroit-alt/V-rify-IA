@@ -1,10 +1,8 @@
 # VERITY CORE 🔐
 
-> Run AI-generated code safely — get a cryptographic proof of execution.
+> Run AI-generated code safely. Get a cryptographic proof of execution.
 
-VERITY CORE executes untrusted code in an isolated sandbox and returns a signed, verifiable proof of what happened. Built for AI agents, automation pipelines, and any system where you need to trust — but verify — generated code.
-
-**Live API**: https://v-rify-ia.fly.dev — **Docs**: https://v-rify-ia.fly.dev/docs
+**Live API**: https://v-rify-ia.fly.dev &nbsp;·&nbsp; **Docs**: https://v-rify-ia.fly.dev/docs &nbsp;·&nbsp; **Python SDK**: `pip install verity-core`
 
 ---
 
@@ -13,50 +11,82 @@ VERITY CORE executes untrusted code in an isolated sandbox and returns a signed,
 ```bash
 curl -X POST https://v-rify-ia.fly.dev/v1/verify \
   -H "Content-Type: application/json" \
-  -d '{
-    "agent_id": "demo",
-    "payload": "print(2**10)",
-    "constraints": {"language": "python", "timeout": 5}
-  }'
+  -d '{"agent_id":"demo","payload":"print(2**10)","constraints":{"language":"python","timeout":5}}'
 ```
-
-You get back:
-- ✅ The execution output (`1024`)
-- 🔐 An Ed25519 signature over the result
-- 📜 A full timestamped trace of the execution pipeline
 
 ```json
 {
   "status": "SUCCESS",
   "execution": { "stdout": "1024\n", "exit_code": 0, "execution_time_ms": 33 },
-  "proof": {
-    "signature": "qx2zZrTp1E37Vk...",
-    "algorithm": "Ed25519",
-    "key_id": "c8f3a73f7b8eb33f"
-  },
-  "state": "COMPLETED",
-  "transitions": [
-    { "from_state": "PENDING",   "to_state": "EXECUTING",  "duration_ms": 0.08 },
-    { "from_state": "EXECUTING", "to_state": "VERIFYING",  "duration_ms": 33.6 },
-    { "from_state": "SIGNING",   "to_state": "COMPLETED",  "duration_ms": 1.4  }
-  ]
+  "proof": { "signature": "qx2zZrTp...", "algorithm": "Ed25519", "key_id": "c8f3a73f7b8eb33f" },
+  "state": "COMPLETED"
 }
 ```
 
-The `proof.signature` is verifiable by anyone holding the public key — no server access required.
+---
+
+## Why
+
+AI agents are executing code in production systems. But:
+
+- You **cannot trust** what was actually executed
+- You **cannot verify** results after the fact
+- You **cannot audit** AI decisions without a tamper-proof record
+
+VERITY CORE fixes this.
 
 ---
 
-## Why this exists
+## Every execution returns
 
-AI agents execute code. That creates real risks:
+- ✅ **Output** — stdout, exit code, execution time
+- 📜 **Full execution trace** — timestamped state transitions (PENDING → EXECUTING → COMPLETED)
+- 🔐 **Cryptographic signature** — Ed25519, verifiable by anyone without server access
 
-| Problem | VERITY CORE's answer |
+---
+
+## Python SDK
+
+```bash
+pip install verity-core
+```
+
+```python
+from verity import run
+
+result = run("print(2**10)")
+
+print(result.output)    # "1024\n"
+print(result.verified)  # True
+print(bool(result))     # True — success + verified
+print(result.proof)     # {"signature": "...", "algorithm": "Ed25519", ...}
+```
+
+Or with the full client:
+
+```python
+from verity import VerityClient
+
+client = VerityClient()
+result = client.run(
+    "import json; print(json.dumps({'ok': True}))",
+    agent_id="my-agent",
+    rules=[{"rule_type": "exit_code", "value": 0}],
+)
+
+if result:
+    history = client.history("my-agent", limit=10)
+```
+
+---
+
+## Examples
+
+| File | Description |
 |---|---|
-| Untrusted code runs on your host | Isolated sandbox, no network, read-only FS |
-| No record of what actually ran | Ed25519-signed proof per execution |
-| Hard to audit AI agent decisions | Full state trace with timestamps |
-| Code could exfiltrate data | Static security scan on every payload |
+| [`examples/curl_example.sh`](examples/curl_example.sh) | Shell one-liner |
+| [`examples/python_example.py`](examples/python_example.py) | Execute + verify signature independently |
+| [`examples/node_example.js`](examples/node_example.js) | Node.js fetch |
 
 ---
 
@@ -68,48 +98,12 @@ AI agents execute code. That creates real risks:
 | `GET` | `/v1/proof/{id}` | Retrieve and validate a stored proof |
 | `GET` | `/v1/history/{agent_id}` | List all proofs for an agent |
 | `GET` | `/v1/public-key` | Ed25519 public key (PEM) |
-| `GET` | `/health` | Health check |
 
-→ [Full API reference](docs/api.md)
-
----
-
-## Examples
-
-```
-examples/
-├── curl_example.sh       # One-liner shell test
-├── python_example.py     # Execute + verify signature independently
-└── node_example.js       # Node.js fetch
-```
+→ [Full API reference](docs/api.md) · [Security](docs/security.md) · [Proof verification](docs/proofs.md)
 
 ---
 
-## Pipeline
-
-Every request passes through a deterministic 7-stage pipeline:
-
-```
-PENDING → VALIDATING_REQUEST → EXECUTING → VERIFYING → SIGNING → PERSISTING → COMPLETED
-```
-
-Each stage is timed and recorded in `transitions[]`. Failures produce a `FAILED_*` state with a reason — never silent errors.
-
----
-
-## Security
-
-- **Sandbox**: network disabled, read-only filesystem, 128 MB RAM, 50% CPU cap, PID limit
-- **Static analysis**: blocks `eval`, `exec`, subprocess calls, raw sockets, sensitive paths
-- **Signatures**: Ed25519 — verifiable by third parties without the private key
-- **Rate limit**: 60 req/min per IP
-- **Payload limit**: 10 KB max
-
-→ [Full security documentation](docs/security.md)
-
----
-
-## Verify a proof independently
+## Verify a proof without our server
 
 ```python
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
@@ -118,13 +112,11 @@ import base64, requests
 pem = requests.get("https://v-rify-ia.fly.dev/v1/public-key").json()["public_key"]
 pub = load_pem_public_key(pem.encode())
 
-proof = ...  # your ProofRecord from /v1/verify
+proof = ...  # your ProofRecord
 msg = f"{proof['action_id']}:{proof['agent_id']}:{proof['payload_hash']}:{proof['result_hash']}:{proof['timestamp']}"
 pub.verify(base64.urlsafe_b64decode(proof["signature"]), msg.encode())
-# raises InvalidSignature if tampered — otherwise silent success
+# silent = valid. raises InvalidSignature if tampered.
 ```
-
-→ [Full verification guide](docs/proofs.md)
 
 ---
 
@@ -133,25 +125,30 @@ pub.verify(base64.urlsafe_b64decode(proof["signature"]), msg.encode())
 ```bash
 git clone https://github.com/haynbroit-alt/V-rify-IA
 cd V-rify-IA
-pip install -e .
+pip install -e ".[dev]"
 uvicorn app.main:app --port 8080
 ```
 
-Docker required for full sandbox isolation. Without Docker, set `VERITY_ALLOW_SUBPROCESS_FALLBACK=true` (dev only).
-
-**Deploy to Fly.io**: push to `main` — GitHub Actions deploys automatically.
+Docker required for full sandbox isolation. Push to `main` → auto-deploys to Fly.io.
 
 ---
 
-## Status
+## Built for
 
-**v0.5** — production-ready MVP, live at https://v-rify-ia.fly.dev
+- AI agents that execute generated code
+- Automation pipelines that need auditable results
+- Secure code execution with verifiable output
+
+---
+
+## Status — v0.5
 
 - [x] Docker sandbox (network-disabled, read-only FS, memory + CPU limits)
-- [x] Ed25519 signatures with key rotation tracking (`key_id`)
-- [x] Orchestrator state machine with full transition timeline
+- [x] Ed25519 signatures with key rotation tracking
+- [x] Full orchestrator state machine + transition timeline
 - [x] Proof ledger (SQLite, verifiable offline)
-- [x] Rate limiting · Payload size limit · Agent history
-- [ ] SDK (`pip install verity-core`)
-- [ ] Webhook callbacks on execution result
+- [x] Python SDK (`from verity import run`)
+- [x] Rate limiting · Payload limit · Agent history
+- [ ] Publish SDK to PyPI (`pip install verity-core`)
+- [ ] Webhook callbacks
 - [ ] Multi-language sandboxes (JS, Bash)
