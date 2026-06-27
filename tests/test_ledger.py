@@ -34,7 +34,8 @@ def test_record_and_retrieve(ledger):
     record = ledger.record("action-1", "agent-007", "print(42)", _result())
     assert record.action_id == "action-1"
     assert record.agent_id == "agent-007"
-    assert len(record.signature) == 64
+    # Ed25519 sig = 64 bytes → 88 chars in base64url (with padding)
+    assert len(record.signature) >= 86
     assert record.payload_hash != ""
     assert record.result_hash != ""
 
