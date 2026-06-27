@@ -27,6 +27,13 @@ def test_health(client):
     assert resp.json()["status"] == "ok"
 
 
+def test_public_key_endpoint(client):
+    resp = client.get("/v1/public-key")
+    assert resp.status_code == 200
+    pem = resp.json()["public_key"]
+    assert "BEGIN PUBLIC KEY" in pem
+
+
 def test_verify_valid_code(client):
     payload = {
         "agent_id": "test-agent",
@@ -45,6 +52,9 @@ def test_verify_valid_code(client):
     assert data["action_id"] != ""
     assert data["proof"]["signature"] != ""
     assert data["verification"]["rules_evaluated"] == 2
+    # v0.3: orchestrator fields
+    assert data["state"] in ("COMPLETED", "FAILED_EXECUTION", "FAILED_PERSISTENCE")
+    assert len(data["transitions"]) >= 3
 
 
 def test_verify_failing_code(client):
