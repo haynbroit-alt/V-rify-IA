@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*"]
+include = ["app*", "verity*"]
 
 [project]
 name = "verity-core"
-version = "0.4.0"
-description = "Trust infrastructure for AI agent actions — execute, verify, prove."
+version = "0.5.0"
+description = "Run AI-generated code safely — get a cryptographic proof of execution."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.111.0",
@@ -20,6 +20,7 @@ dependencies = [
     "python-json-logger>=2.0.7",
     "cryptography>=42.0.0",
     "slowapi>=0.1.9",
+    "requests>=2.28.0",
 ]
 
 [project.optional-dependencies]
