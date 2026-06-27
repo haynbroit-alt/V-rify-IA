@@ -1,0 +1,15 @@
+services:
+  verity-core:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - verity-data:/data
+    environment:
+      - VERITY_DB_PATH=/data/ledger.db
+      - VERITY_SIGNING_KEY=${VERITY_SIGNING_KEY:-change-me-in-production}
+    restart: unless-stopped
+
+volumes:
+  verity-data:
