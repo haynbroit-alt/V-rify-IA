@@ -31,7 +31,9 @@ class VerificationRule(BaseModel):
 class AIActionPayload(BaseModel):
     agent_id: str = Field(..., description="Unique identifier for the emitting AI agent")
     action_type: ActionType = Field(default=ActionType.execute_code)
-    payload: str = Field(..., description="Raw code or payload to execute")
+    payload: str = Field(
+        ..., max_length=10_240, description="Raw code or payload to execute (max 10 KB)"
+    )
     constraints: ExecutionConstraints = Field(default_factory=ExecutionConstraints)
     verification_rules: List[VerificationRule] = Field(default_factory=list)
 
@@ -99,6 +101,12 @@ class ProofRecord(BaseModel):
         description="Public-key fingerprint (SHA-256, first 16 hex chars) for rotation tracking",
     )
     algorithm: str = Field(default="Ed25519", description="Signature algorithm")
+
+
+class HistoryResponse(BaseModel):
+    agent_id: str
+    count: int
+    records: List[ProofRecord]
 
 
 class VerityResponse(BaseModel):
