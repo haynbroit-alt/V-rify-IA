@@ -31,7 +31,9 @@ class VerificationRule(BaseModel):
 class AIActionPayload(BaseModel):
     agent_id: str = Field(..., description="Unique identifier for the emitting AI agent")
     action_type: ActionType = Field(default=ActionType.execute_code)
-    payload: str = Field(..., max_length=10_240, description="Raw code or payload to execute (max 10 KB)")
+    payload: str = Field(
+        ..., max_length=10_240, description="Raw code or payload to execute (max 10 KB)"
+    )
     constraints: ExecutionConstraints = Field(default_factory=ExecutionConstraints)
     verification_rules: List[VerificationRule] = Field(default_factory=list)
 
