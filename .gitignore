@@ -6,6 +6,8 @@ build/
 .eggs/
 *.db
 .env
+.coverage
+coverage.xml
 .venv/
 venv/
 .pytest_cache/
