@@ -2,7 +2,10 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.config import get_settings
 from app.engine import VerificationEngine
@@ -25,6 +28,8 @@ _orchestrator = ActionOrchestrator(
     engine=VerificationEngine(),
     ledger=ProofLedger(),
 )
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -52,6 +57,9 @@ app = FastAPI(
         {"name": "ops", "description": "Operational endpoints (health, public key)."},
     ],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # ── Ops ────────────────────────────────────────────────────────────────────────
@@ -119,7 +127,8 @@ _VERIFY_EXAMPLE = {
     response_description="Signed result with verification report, proof, and state transitions.",
     openapi_extra={"requestBody": {"content": {"application/json": {"examples": _VERIFY_EXAMPLE}}}},
 )
-async def verify_action(action: AIActionPayload):
+@limiter.limit("60/minute")
+async def verify_action(request: Request, action: AIActionPayload):
     """
     Universal entry point for AI agents.
 
@@ -130,6 +139,8 @@ async def verify_action(action: AIActionPayload):
 
     The `proof.signature` is an Ed25519 signature verifiable with the public key
     at `GET /v1/public-key` — no server access required to validate.
+
+    **Rate limit**: 60 requests per minute per IP.
     """
     action_id = str(uuid.uuid4())
     logger.info("action.received", extra={"action_id": action_id, "agent_id": action.agent_id})

@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     # Sandbox defaults
     default_timeout: int = 5
     default_memory: str = "128m"
+    # WARNING: never set True in production — subprocess executes code on the host.
+    allow_subprocess_fallback: bool = False
 
     # Logging
     log_level: str = "INFO"
@@ -20,7 +22,7 @@ class Settings(BaseSettings):
 
     # API
     api_title: str = "VERITY CORE"
-    api_version: str = "0.1.0"
+    api_version: str = "0.4.0"
 
 
 @lru_cache

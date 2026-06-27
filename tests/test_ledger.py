@@ -38,6 +38,8 @@ def test_record_and_retrieve(ledger):
     assert len(record.signature) >= 86
     assert record.payload_hash != ""
     assert record.result_hash != ""
+    assert len(record.key_id) == 16
+    assert record.algorithm == "Ed25519"
 
     retrieved = ledger.get("action-1")
     assert retrieved is not None

@@ -94,6 +94,11 @@ class ProofRecord(BaseModel):
     signature: str = Field(description="Ed25519 signature (base64url) over the canonical digest")
     timestamp: float
     agent_id: str
+    key_id: str = Field(
+        default="",
+        description="Public-key fingerprint (SHA-256, first 16 hex chars) for rotation tracking",
+    )
+    algorithm: str = Field(default="Ed25519", description="Signature algorithm")
 
 
 class VerityResponse(BaseModel):

@@ -8,7 +8,7 @@ include = ["app*"]
 
 [project]
 name = "verity-core"
-version = "0.3.0"
+version = "0.4.0"
 description = "Trust infrastructure for AI agent actions — execute, verify, prove."
 requires-python = ">=3.11"
 dependencies = [
@@ -19,6 +19,7 @@ dependencies = [
     "docker>=7.0.0",
     "python-json-logger>=2.0.7",
     "cryptography>=42.0.0",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

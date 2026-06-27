@@ -23,6 +23,12 @@ from app.models import (
 # ── Engine benchmarks (no I/O) ─────────────────────────────────────────────────
 
 
+@pytest.fixture(autouse=True)
+def allow_fallback(monkeypatch):
+    """Benchmarks run without Docker in CI — enable subprocess fallback explicitly."""
+    monkeypatch.setenv("VERITY_ALLOW_SUBPROCESS_FALLBACK", "true")
+
+
 @pytest.fixture
 def engine():
     return VerificationEngine()
