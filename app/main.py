@@ -1,17 +1,17 @@
-import uuid
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, status
 
+from app.engine import VerificationEngine
+from app.kernel import ExecutionKernel
+from app.ledger import ProofLedger
 from app.models import (
     AIActionPayload,
     ExecutionStatus,
     VerityResponse,
 )
-from app.kernel import ExecutionKernel
-from app.engine import VerificationEngine
-from app.ledger import ProofLedger
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,14 +54,16 @@ async def verify_action(action: AIActionPayload):
     # 1. Execute in sandbox
     result = kernel.execute(action.payload, action.constraints)
     logger.info(
-        f"[{action_id}] Execution status={result.status} exit={result.exit_code} ms={result.execution_time_ms:.1f}"
+        "[%s] Execution status=%s exit=%s ms=%.1f",
+        action_id,
+        result.status,
+        result.exit_code,
+        result.execution_time_ms,
     )
 
     # 2. Verify against rules + security scan
     report = engine.verify(result, action.verification_rules, action.payload)
-    logger.info(
-        f"[{action_id}] Verification passed={report.passed} flags={report.security_flags}"
-    )
+    logger.info(f"[{action_id}] Verification passed={report.passed} flags={report.security_flags}")
 
     # 3. Record proof regardless of outcome
     proof = ledger.record(action_id, action.agent_id, action.payload, result)
@@ -88,16 +90,12 @@ async def get_proof(action_id: str):
     """Retrieve the proof record for a previously executed action."""
     record = ledger.get(action_id)
     if record is None:
-        raise HTTPException(
-            status_code=404, detail=f"No proof found for action_id={action_id}"
-        )
+        raise HTTPException(status_code=404, detail=f"No proof found for action_id={action_id}")
 
     valid = ledger.verify_signature(record)
     return VerityResponse(
         action_id=action_id,
         status=ExecutionStatus.success if valid else ExecutionStatus.rejected,
         proof=record,
-        message="Proof signature valid."
-        if valid
-        else "Proof signature INVALID — tampered record.",
+        message="Proof signature valid." if valid else "Proof signature INVALID — tampered record.",
     )

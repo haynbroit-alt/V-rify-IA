@@ -1,4 +1,5 @@
 import pytest
+
 from app.engine import VerificationEngine
 from app.models import ExecutionResult, ExecutionStatus, VerificationRule
 
@@ -33,9 +34,7 @@ def test_exit_code_rule_pass(engine):
 
 def test_exit_code_rule_fail(engine):
     rules = [VerificationRule(rule_type="exit_code", value=0)]
-    report = engine.verify(
-        _result(exit_code=1, status=ExecutionStatus.failure), rules, "raise"
-    )
+    report = engine.verify(_result(exit_code=1, status=ExecutionStatus.failure), rules, "raise")
     assert report.passed is False
     assert len(report.violations) == 1
 

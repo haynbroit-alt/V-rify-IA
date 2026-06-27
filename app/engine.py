@@ -1,12 +1,12 @@
-import re
 import logging
+import re
 from typing import List
 
 from app.models import (
     ExecutionResult,
+    ExecutionStatus,
     VerificationReport,
     VerificationRule,
-    ExecutionStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,9 +54,7 @@ class VerificationEngine:
             if ok:
                 rules_passed += 1
             else:
-                violations.append(
-                    f"Rule '{rule.rule_type}' failed (expected {rule.value!r})"
-                )
+                violations.append(f"Rule '{rule.rule_type}' failed (expected {rule.value!r})")
 
         if result.status == ExecutionStatus.timeout:
             violations.append("Execution timed out — action rejected")

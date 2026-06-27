@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Any, Optional, List
 from enum import Enum
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class ActionType(str, Enum):
@@ -17,24 +18,18 @@ class Language(str, Enum):
 
 class ExecutionConstraints(BaseModel):
     timeout: int = Field(default=5, ge=1, le=30, description="Timeout in seconds")
-    memory: str = Field(
-        default="128m", description="Memory limit (e.g. '128m', '256m')"
-    )
+    memory: str = Field(default="128m", description="Memory limit (e.g. '128m', '256m')")
     language: Language = Field(default=Language.python)
     network_disabled: bool = Field(default=True)
 
 
 class VerificationRule(BaseModel):
-    rule_type: str = Field(
-        ..., description="'exit_code', 'output_contains', 'output_not_contains'"
-    )
+    rule_type: str = Field(..., description="'exit_code', 'output_contains', 'output_not_contains'")
     value: Any = Field(..., description="Expected value for the rule")
 
 
 class AIActionPayload(BaseModel):
-    agent_id: str = Field(
-        ..., description="Unique identifier for the emitting AI agent"
-    )
+    agent_id: str = Field(..., description="Unique identifier for the emitting AI agent")
     action_type: ActionType = Field(default=ActionType.execute_code)
     payload: str = Field(..., description="Raw code or payload to execute")
     constraints: ExecutionConstraints = Field(default_factory=ExecutionConstraints)

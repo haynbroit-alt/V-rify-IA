@@ -1,10 +1,10 @@
 import hashlib
 import hmac
 import json
+import logging
 import os
 import sqlite3
 import time
-import logging
 from pathlib import Path
 
 from app.models import ExecutionResult, ProofRecord
@@ -14,9 +14,7 @@ logger = logging.getLogger(__name__)
 DB_PATH = Path(os.getenv("VERITY_DB_PATH", "/tmp/verity_ledger.db"))
 
 # Secret key for HMAC-SHA256 signatures (in prod: load from HSM / env secret)
-_SIGNING_KEY = os.getenv(
-    "VERITY_SIGNING_KEY", "verity-dev-key-change-in-production"
-).encode()
+_SIGNING_KEY = os.getenv("VERITY_SIGNING_KEY", "verity-dev-key-change-in-production").encode()
 
 
 def _init_db(conn: sqlite3.Connection) -> None:
@@ -67,9 +65,7 @@ class ProofLedger:
         result_hash = self._hash(result_digest)
         ts = time.time()
 
-        signature = self._sign(
-            f"{action_id}:{agent_id}:{payload_hash}:{result_hash}:{ts}"
-        )
+        signature = self._sign(f"{action_id}:{agent_id}:{payload_hash}:{result_hash}:{ts}")
 
         record = ProofRecord(
             action_id=action_id,
