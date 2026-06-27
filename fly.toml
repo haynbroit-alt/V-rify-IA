@@ -1,0 +1,31 @@
+app = "verity-core"
+primary_region = "cdg"
+
+[build]
+
+[env]
+  VERITY_ALLOW_SUBPROCESS_FALLBACK = "true"
+  VERITY_DB_PATH = "/data/verity.db"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "15s"
+    method = "GET"
+    path = "/health"
+
+[[mounts]]
+  source = "verity_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
