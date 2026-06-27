@@ -1,4 +1,4 @@
-app = "verity-core"
+app = "v-rify-ia"
 primary_region = "cdg"
 
 [build]
