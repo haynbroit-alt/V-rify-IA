@@ -67,6 +67,9 @@ def _init_db(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_proof_ledger_agent ON proof_ledger(agent_id, timestamp DESC)"
+    )
     # Forward-compatible migration: add columns missing from older schemas.
     for col, defn in [
         ("key_id", "TEXT NOT NULL DEFAULT ''"),
@@ -154,6 +157,26 @@ class ProofLedger:
             key_id=row[6],
             algorithm=row[7],
         )
+
+    def list_by_agent(self, agent_id: str, limit: int = 50) -> list[ProofRecord]:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT action_id, agent_id, payload_hash, result_hash, signature, timestamp, "
+                "key_id, algorithm FROM proof_ledger "
+                "WHERE agent_id = ? ORDER BY timestamp DESC LIMIT ?",
+                (agent_id, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+        return [
+            ProofRecord(
+                action_id=r[0], agent_id=r[1], payload_hash=r[2],
+                result_hash=r[3], signature=r[4], timestamp=r[5],
+                key_id=r[6], algorithm=r[7],
+            )
+            for r in rows
+        ]
 
     def verify_signature(self, record: ProofRecord) -> bool:
         try:

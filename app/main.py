@@ -2,7 +2,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Query, Request, status
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -15,6 +15,7 @@ from app.logging_config import configure_logging
 from app.models import (
     AIActionPayload,
     ExecutionStatus,
+    HistoryResponse,
     VerityResponse,
 )
 from app.orchestrator import ActionOrchestrator
@@ -183,3 +184,26 @@ async def get_proof(action_id: str):
         proof=record,
         message="Proof signature valid." if valid else "Proof signature INVALID — tampered record.",
     )
+
+
+@app.get(
+    "/v1/history/{agent_id}",
+    response_model=HistoryResponse,
+    tags=["audit"],
+    summary="List proof records for an agent",
+    response_description="Chronological list of signed proofs emitted by this agent.",
+)
+async def get_history(
+    agent_id: str,
+    limit: int = Query(default=50, ge=1, le=100, description="Max records to return"),
+):
+    """
+    Returns the most recent proof records for a given `agent_id`, newest first.
+
+    Useful for auditing all actions an agent has taken, or replaying an agent's
+    execution history. Each record carries a verifiable Ed25519 signature.
+    """
+    ledger = ProofLedger()
+    records = ledger.list_by_agent(agent_id, limit)
+    logger.info("history.retrieved", extra={"agent_id": agent_id, "count": len(records)})
+    return HistoryResponse(agent_id=agent_id, count=len(records), records=records)

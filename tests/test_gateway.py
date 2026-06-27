@@ -100,3 +100,51 @@ def test_security_flags_surfaced(client):
     resp = client.post("/v1/verify", json=payload)
     data = resp.json()
     assert len(data["verification"]["security_flags"]) > 0
+
+
+def test_payload_too_large_rejected(client):
+    payload = {
+        "agent_id": "test-agent",
+        "payload": "x" * 10_241,
+        "constraints": {"language": "python", "timeout": 5},
+    }
+    resp = client.post("/v1/verify", json=payload)
+    assert resp.status_code == 422
+
+
+def test_history_endpoint(client):
+    payload = {
+        "agent_id": "history-agent",
+        "payload": "print('hi')",
+        "constraints": {"language": "python", "timeout": 5},
+    }
+    client.post("/v1/verify", json=payload)
+    client.post("/v1/verify", json=payload)
+
+    resp = client.get("/v1/history/history-agent")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["agent_id"] == "history-agent"
+    assert data["count"] == 2
+    assert len(data["records"]) == 2
+
+
+def test_history_empty_for_unknown_agent(client):
+    resp = client.get("/v1/history/ghost-agent")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 0
+    assert resp.json()["records"] == []
+
+
+def test_history_limit_param(client):
+    payload = {
+        "agent_id": "limit-agent",
+        "payload": "print(1)",
+        "constraints": {"language": "python", "timeout": 5},
+    }
+    for _ in range(5):
+        client.post("/v1/verify", json=payload)
+
+    resp = client.get("/v1/history/limit-agent?limit=3")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 3
