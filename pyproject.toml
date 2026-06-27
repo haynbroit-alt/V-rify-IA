@@ -10,7 +10,23 @@ include = ["app*", "verity*"]
 name = "verity-core"
 version = "0.5.0"
 description = "Run AI-generated code safely — get a cryptographic proof of execution."
+readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
+keywords = ["ai", "sandbox", "execution", "cryptography", "agents", "security"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://v-rify-ia.fly.dev"
+Documentation = "https://v-rify-ia.fly.dev/docs"
+Repository = "https://github.com/haynbroit-alt/V-rify-IA"
 dependencies = [
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.30.0",
