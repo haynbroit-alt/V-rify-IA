@@ -9,7 +9,13 @@ def engine():
 
 
 def _result(stdout="", stderr="", exit_code=0, status=ExecutionStatus.success, ms=10.0):
-    return ExecutionResult(stdout=stdout, stderr=stderr, exit_code=exit_code, status=status, execution_time_ms=ms)
+    return ExecutionResult(
+        stdout=stdout,
+        stderr=stderr,
+        exit_code=exit_code,
+        status=status,
+        execution_time_ms=ms,
+    )
 
 
 def test_passes_with_no_rules(engine):
@@ -27,7 +33,9 @@ def test_exit_code_rule_pass(engine):
 
 def test_exit_code_rule_fail(engine):
     rules = [VerificationRule(rule_type="exit_code", value=0)]
-    report = engine.verify(_result(exit_code=1, status=ExecutionStatus.failure), rules, "raise")
+    report = engine.verify(
+        _result(exit_code=1, status=ExecutionStatus.failure), rules, "raise"
+    )
     assert report.passed is False
     assert len(report.violations) == 1
 

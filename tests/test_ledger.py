@@ -9,6 +9,7 @@ def tmp_db(tmp_path, monkeypatch):
     monkeypatch.setenv("VERITY_DB_PATH", str(tmp_path / "test_ledger.db"))
     import app.ledger as ledger_mod
     from pathlib import Path
+
     ledger_mod.DB_PATH = Path(os.environ["VERITY_DB_PATH"])
 
 
@@ -18,7 +19,12 @@ def ledger():
 
 
 def _result():
-    return ExecutionResult(stdout="42\n", exit_code=0, status=ExecutionStatus.success, execution_time_ms=12.5)
+    return ExecutionResult(
+        stdout="42\n",
+        exit_code=0,
+        status=ExecutionStatus.success,
+        execution_time_ms=12.5,
+    )
 
 
 def test_record_and_retrieve(ledger):

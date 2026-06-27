@@ -4,7 +4,6 @@ import json
 import os
 import sqlite3
 import time
-import uuid
 import logging
 from pathlib import Path
 
@@ -15,7 +14,9 @@ logger = logging.getLogger(__name__)
 DB_PATH = Path(os.getenv("VERITY_DB_PATH", "/tmp/verity_ledger.db"))
 
 # Secret key for HMAC-SHA256 signatures (in prod: load from HSM / env secret)
-_SIGNING_KEY = os.getenv("VERITY_SIGNING_KEY", "verity-dev-key-change-in-production").encode()
+_SIGNING_KEY = os.getenv(
+    "VERITY_SIGNING_KEY", "verity-dev-key-change-in-production"
+).encode()
 
 
 def _init_db(conn: sqlite3.Connection) -> None:

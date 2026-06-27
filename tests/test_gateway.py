@@ -8,12 +8,14 @@ def tmp_db(tmp_path, monkeypatch):
     monkeypatch.setenv("VERITY_DB_PATH", str(tmp_path / "test_gateway.db"))
     import app.ledger as ledger_mod
     from pathlib import Path
+
     ledger_mod.DB_PATH = Path(os.environ["VERITY_DB_PATH"])
 
 
 @pytest.fixture
 def client():
     from app.main import app
+
     return TestClient(app)
 
 
@@ -79,7 +81,7 @@ def test_get_proof_not_found(client):
 def test_security_flags_surfaced(client):
     payload = {
         "agent_id": "attacker",
-        "payload": "eval('__import__(\"os\").system(\"ls\")')",
+        "payload": 'eval(\'__import__("os").system("ls")\')',
         "constraints": {"language": "python", "timeout": 5},
     }
     resp = client.post("/v1/verify", json=payload)

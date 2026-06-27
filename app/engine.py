@@ -2,7 +2,12 @@ import re
 import logging
 from typing import List
 
-from app.models import ExecutionResult, VerificationReport, VerificationRule, ExecutionStatus
+from app.models import (
+    ExecutionResult,
+    VerificationReport,
+    VerificationRule,
+    ExecutionStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +16,10 @@ SECURITY_PATTERNS = [
     (r"import\s+os\s*;\s*os\.system", "os.system call detected"),
     (r"__import__\(['\"]os['\"]", "dynamic os import detected"),
     (r"subprocess\.(call|run|Popen|check_output)", "subprocess execution detected"),
-    (r"open\s*\([^)]*['\"][/\\](?:etc|proc|sys|dev)", "sensitive filesystem access detected"),
+    (
+        r"open\s*\([^)]*['\"][/\\](?:etc|proc|sys|dev)",
+        "sensitive filesystem access detected",
+    ),
     (r"socket\s*\.\s*socket", "raw socket creation detected"),
     (r"eval\s*\(", "eval() usage detected"),
     (r"exec\s*\(", "exec() usage detected"),

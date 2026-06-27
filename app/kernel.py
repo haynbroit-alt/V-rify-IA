@@ -1,7 +1,7 @@
 import time
 import docker
 import logging
-from docker.errors import ContainerError, ImageNotFound, APIError
+from docker.errors import ImageNotFound, APIError
 
 from app.models import ExecutionResult, ExecutionStatus, ExecutionConstraints, Language
 
@@ -39,7 +39,9 @@ class ExecutionKernel:
             return self._fallback_execute(code, constraints)
         return self._docker_execute(code, constraints)
 
-    def _docker_execute(self, code: str, constraints: ExecutionConstraints) -> ExecutionResult:
+    def _docker_execute(
+        self, code: str, constraints: ExecutionConstraints
+    ) -> ExecutionResult:
         language = constraints.language
         image = LANGUAGE_IMAGES[language]
         command = LANGUAGE_COMMANDS[language](code)
@@ -62,7 +64,11 @@ class ExecutionKernel:
             try:
                 result = container.wait(timeout=constraints.timeout)
                 exit_code = result.get("StatusCode", 1)
-                status = ExecutionStatus.success if exit_code == 0 else ExecutionStatus.failure
+                status = (
+                    ExecutionStatus.success
+                    if exit_code == 0
+                    else ExecutionStatus.failure
+                )
             except Exception:
                 container.kill()
                 return ExecutionResult(
@@ -71,8 +77,12 @@ class ExecutionKernel:
                     execution_time_ms=(time.time() - start_time) * 1000,
                 )
 
-            logs = container.logs(stdout=True, stderr=False).decode("utf-8", errors="replace")
-            err_logs = container.logs(stdout=False, stderr=True).decode("utf-8", errors="replace")
+            logs = container.logs(stdout=True, stderr=False).decode(
+                "utf-8", errors="replace"
+            )
+            err_logs = container.logs(stdout=False, stderr=True).decode(
+                "utf-8", errors="replace"
+            )
 
             return ExecutionResult(
                 stdout=logs,
@@ -103,9 +113,12 @@ class ExecutionKernel:
                 except Exception:
                     pass
 
-    def _fallback_execute(self, code: str, constraints: ExecutionConstraints) -> ExecutionResult:
+    def _fallback_execute(
+        self, code: str, constraints: ExecutionConstraints
+    ) -> ExecutionResult:
         """Subprocess fallback when Docker is unavailable (dev/test only)."""
         import subprocess
+
         start_time = time.time()
         language = constraints.language
 
@@ -128,7 +141,9 @@ class ExecutionKernel:
                 stderr=proc.stderr,
                 exit_code=proc.returncode,
                 execution_time_ms=(time.time() - start_time) * 1000,
-                status=ExecutionStatus.success if proc.returncode == 0 else ExecutionStatus.failure,
+                status=ExecutionStatus.success
+                if proc.returncode == 0
+                else ExecutionStatus.failure,
             )
         except subprocess.TimeoutExpired:
             return ExecutionResult(
