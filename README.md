@@ -1,8 +1,13 @@
-# VERITY CORE 🔐
+# VERITY CORE
 
 > Run AI-generated code safely. Get a cryptographic proof of execution.
 
-**Live API**: https://v-rify-ia.fly.dev &nbsp;·&nbsp; **Docs**: https://v-rify-ia.fly.dev/docs &nbsp;·&nbsp; **Python SDK**: `pip install verity-core`
+[![PyPI version](https://img.shields.io/pypi/v/verity-core?color=blue)](https://pypi.org/project/verity-core/)
+[![CI](https://img.shields.io/github/actions/workflow/status/haynbroit-alt/V-rify-IA/ci.yml?branch=main&label=CI)](https://github.com/haynbroit-alt/V-rify-IA/actions)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue)](https://pypi.org/project/verity-core/)
+
+**Live API**: https://v-rify-ia.fly.dev &nbsp;·&nbsp; **Docs**: https://v-rify-ia.fly.dev/docs &nbsp;·&nbsp; **PyPI**: `pip install verity-core`
 
 ---
 
@@ -80,12 +85,41 @@ if result:
 
 ---
 
+## LangChain integration
+
+```python
+pip install verity-core langchain-core
+```
+
+```python
+from examples.langchain_tool import VerityTool
+from langchain_openai import ChatOpenAI
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+
+llm = ChatOpenAI(model="gpt-4o")
+tools = [VerityTool()]
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant. Always run code through the sandbox."),
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}"),
+])
+agent = create_tool_calling_agent(llm, tools, prompt)
+executor = AgentExecutor(agent=agent, tools=tools)
+
+result = executor.invoke({"input": "What is 2 to the power of 10?"})
+# Every execution: isolated sandbox + Ed25519 proof + immutable ledger
+```
+
+---
+
 ## Examples
 
 | File | Description |
 |---|---|
-| [`examples/curl_example.sh`](examples/curl_example.sh) | Shell one-liner |
+| [`examples/langchain_tool.py`](examples/langchain_tool.py) | LangChain tool integration |
 | [`examples/python_example.py`](examples/python_example.py) | Execute + verify signature independently |
+| [`examples/curl_example.sh`](examples/curl_example.sh) | Shell one-liner |
 | [`examples/node_example.js`](examples/node_example.js) | Node.js fetch |
 
 ---
@@ -147,8 +181,14 @@ Docker required for full sandbox isolation. Push to `main` → auto-deploys to F
 - [x] Ed25519 signatures with key rotation tracking
 - [x] Full orchestrator state machine + transition timeline
 - [x] Proof ledger (SQLite, verifiable offline)
-- [x] Python SDK (`from verity import run`)
+- [x] Python SDK — `pip install verity-core`
 - [x] Rate limiting · Payload limit · Agent history
-- [ ] Publish SDK to PyPI (`pip install verity-core`)
+- [x] LangChain tool integration
 - [ ] Webhook callbacks
 - [ ] Multi-language sandboxes (JS, Bash)
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
