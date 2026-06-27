@@ -7,14 +7,15 @@ import sqlite3
 import time
 from pathlib import Path
 
+from app.config import get_settings
 from app.models import ExecutionResult, ProofRecord
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path(os.getenv("VERITY_DB_PATH", "/tmp/verity_ledger.db"))
-
-# Secret key for HMAC-SHA256 signatures (in prod: load from HSM / env secret)
-_SIGNING_KEY = os.getenv("VERITY_SIGNING_KEY", "verity-dev-key-change-in-production").encode()
+# DB_PATH and _SIGNING_KEY are resolved lazily via get_settings() so that
+# tests can override VERITY_DB_PATH before the module is first imported.
+DB_PATH = Path(os.getenv("VERITY_DB_PATH", get_settings().db_path))
+_SIGNING_KEY = os.getenv("VERITY_SIGNING_KEY", get_settings().signing_key).encode()
 
 
 def _init_db(conn: sqlite3.Connection) -> None:
